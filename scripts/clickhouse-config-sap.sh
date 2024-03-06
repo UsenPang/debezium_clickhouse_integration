@@ -1,0 +1,11 @@
+# Clickhouse config
+SINK_CONNECTOR_NAME="mssql-sink-connector"
+CLICKHOUSE_HOST="192.168.0.128"
+CLICKHOUSE_PORT=8123
+CLICKHOUSE_USER="default"
+CLICKHOUSE_PASSWORD=""
+CLICKHOUSE_DATABASE="test"
+TOPICS="sqlserver.test2.dbo.OJDT"
+
+TOPICS_REGEX="sqlserver.hhy.dbo.*"
+

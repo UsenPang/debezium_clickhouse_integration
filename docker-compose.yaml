@@ -1,0 +1,121 @@
+version: '3'
+
+services:
+  zookeeper:
+    restart: always
+    container_name: zookeeper
+    image: quay.io/debezium/zookeeper:2.5
+    
+  kafka:
+    restart: always
+    container_name: kafka
+    image: quay.io/debezium/kafka:2.5
+    environment:
+      ZOOKEEPER_CONNECT: zookeeper:2181
+    volumes:
+      - kafka-data:/kafka/data
+    depends_on:
+      - zookeeper
+ 
+  schema_registry:
+    restart: always
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema_registry
+    ports:
+      - 8081:8081
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_HOST_NAME: schema_registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    depends_on:
+      - zookeeper
+
+  source:
+    restart: always
+    container_name: source
+    build:
+      context: ./docker/debezium-connect-tx
+      args:
+        DEBEZIUM_VERSION: 2.5
+    ports:
+     - 8083:8083
+    environment:
+      GROUP_ID: 1
+      # Kafka config
+      CONFIG_STORAGE_TOPIC: config-storage-topic-source
+      OFFSET_STORAGE_TOPIC: offset-storage-topic-source
+      STATUS_STORAGE_TOPIC: status-storage-topic-source
+      BOOTSTRAP_SERVERS: kafka:9092
+      # Avro config
+      KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema_registry:8081
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema_registry:8081
+      #JMX config
+      LOG_LEVEL: INFO
+    depends_on:
+      - kafka
+      - schema_registry
+
+  sink:
+    restart: always
+    container_name: sink
+    ports:
+      - 33333:33333
+      - 18083:8083
+    build:
+      context: ./docker/debezium-connect-tx
+      args:
+        DEBEZIUM_VERSION: 2.5
+    environment:
+      GROUP_ID: 2
+      # Kafka config
+      CONFIG_STORAGE_TOPIC: config-storage-topic-sink
+      OFFSET_STORAGE_TOPIC: offset-storage-topic-sink
+      STATUS_STORAGE_TOPIC: status-storage-topic-sink
+      BOOTSTRAP_SERVERS: kafka:9092
+      # Avro config
+      KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema_registry:8081
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema_registry:8081
+      #JMX config
+      JMXHOST: 192.168.0.128
+      JMXPORT: 33333
+      KAFKA_HEAP_OPTS: -Xms5G -Xmx10G
+    depends_on:
+      - kafka
+      - schema_registry
+
+  
+
+  redpanda_console:
+    restart: always 
+    container_name: redpanda_console
+    image: docker.redpanda.com/redpandadata/console:latest
+    ports:
+      - 8089:8080
+    entrypoint: /bin/sh
+    command: -c "echo \"$$CONSOLE_CONFIG_FILE\" > /tmp/config.yml; /app/console"
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["kafka:9092"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://schema_registry:8081"]
+        connect:
+          enabled: true
+          clusters:
+            - name: source-cluster
+              url: http://source:8083
+            - name: sink-cluster
+              url: http://sink:8083
+    depends_on:
+      - kafka
+
+
+volumes:
+  kafka-data:
