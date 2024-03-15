@@ -1,5 +1,5 @@
 # debezium_clickhouse_integration
-这个项目创建了一个实时数据流通道，使用了debezium连接器，并且新增了一个[clickhosue-sink-connect](https://github.com/Altinity/clickhouse-sink-connector) 连接器，实习数据实时同步到clickhouse中。其中使用redpanda-console作为kafka的UI，可以在console中查看kafka的topic信息、schemaregistry信息，以及查看connect的状态并创建connect实例。
+这个项目创建了一个实时数据流通道，使用了debezium连接器，并且新增了一个[clickhouse-sink-connect](https://github.com/Altinity/clickhouse-sink-connector) 连接器，实习数据实时同步到clickhouse中。其中使用redpanda-console作为kafka的UI，可以在console中查看kafka的topic信息、schemaregistry信息，以及查看connect的状态并创建connect实例。
 
 
 # Getting Started
